@@ -22,7 +22,9 @@ using namespace cv;
 
 class roiFinder
 {
+
 public:
+    roiFinder();
     struct hsvParams{
         int hDown;
         int hUp;
@@ -31,17 +33,12 @@ public:
         int vDown;
         int vUp;
     };
-    struct roi{
-        vector<Mat> roiR;
-        vector<Mat> roiB;
-    };
-
-    roiFinder::roi startSearch(const Mat&);
+    vector<Mat> startSearch(const Mat& frame, hsvParams params1, hsvParams params2);
     void processingBinaryImage(const Mat&, Mat&);
     void hsvInRange(const Mat&, Mat&, hsvParams);
-    vector<Rect> findROI(const Mat&, const Mat&, Mat&);
+    vector<Rect> findROI(const Mat&, const Mat&);
     vector<Mat> isItCircle(const Mat&, vector<Rect>);
-
 };
+
 
 #endif // ROIFINDER_H

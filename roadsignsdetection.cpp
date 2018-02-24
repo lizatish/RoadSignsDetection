@@ -18,18 +18,20 @@ void roadSignsDetection::startSignsDetection(){
         cap >> frame;
         imshow("Src", frame);
 
-        roiFinder::roi r = RD->startFindRoi(frame);
+        roiFinder::hsvParams hsv0 = {0, 0, 0, 0, 0, 0,};
+        vector<Mat> roiR = RD->startFindRoi(frame, hsvRed1, hsvRed2);
+        vector<Mat> roiB = RD->startFindRoi(frame, hsvBlue, hsv0);
 
         // Старт тренировки
         //startTraining();
 
         // Старт распознавателя для красного цвета
-        for(unsigned int i = 0; i < r.roiR.size(); i++){
-            RD->startClassifier(r.roiR[i]);
+        for(unsigned int i = 0; i < roiR.size(); i++){
+            RD->startClassifier(roiR[i]);
         }
         // Старт распознавателя для синего цвета
-        for(unsigned int i = 0; i < r.roiB.size(); i++){
-            RD->startClassifier(r.roiB[i]);
+        for(unsigned int i = 0; i < roiB.size(); i++){
+            RD->startClassifier(roiB[i]);
         }
         if(waitKey(70) >= 0) break;
     }
@@ -39,8 +41,8 @@ void roadSignsDetection::startSignsDetection(){
 void roadSignsDetection::startClassifier(const Mat& img) {
 
     // Создание единственного объекта класса распознавателя
-    bool isSVMload = false;
-    signClassifier *SC;
+    static bool isSVMload = false;
+    static signClassifier *SC;
     if(!isSVMload){
         SC = new signClassifier();
         isSVMload = true;
@@ -50,10 +52,11 @@ void roadSignsDetection::startClassifier(const Mat& img) {
     // Возвращение номера папки с рапознанным знаком
     int value = SC->detectDigit(img);
 
+    // Выборка результатов : минимализация ошибок
     if(value != 6)
         numbers.push_back(value);
-    if(numbers.size() == 5)
-        for(int i = 0; i < 4; i++){
+    if(numbers.size() == 10)
+        for (int i = 0; i < 9; i++){
             if(numbers[i] == numbers[i + 1])
                 continue;
             else{
@@ -63,7 +66,7 @@ void roadSignsDetection::startClassifier(const Mat& img) {
         }
 
     QTextCodec::setCodecForLocale(QTextCodec::codecForName("UTF-8"));
-    if(numbers.size() == 5){
+    if(numbers.size() == 10){
         numbers.erase(numbers.begin(), numbers.end());
         switch (value) {
         case 0:
@@ -103,11 +106,11 @@ void roadSignsDetection::startTraining() {
 }
 
 
-roiFinder::roi roadSignsDetection::startFindRoi(Mat& frame){
+vector<Mat> roadSignsDetection::startFindRoi(Mat& frame, roiFinder::hsvParams p1, roiFinder::hsvParams p2){
     roiFinder* RF;
-    RF = new roiFinder;
+    RF = new roiFinder();
 
-    roiFinder::roi r = RF->startSearch(frame);;
+    vector<Mat> r = RF->startSearch(frame, p1, p2);;
     delete RF;
 
     return r;

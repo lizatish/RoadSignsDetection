@@ -23,11 +23,16 @@ using namespace cv;
 
 class roadSignsDetection
 {
+private:
+    roiFinder::hsvParams hsvRed1 = { 0, 16, 110, 255, 130, 255};
+    roiFinder::hsvParams hsvRed2 = { 170, 180, 110, 255, 130, 255};
+    roiFinder::hsvParams hsvBlue = { 100, 120, 140, 255, 40, 255};
+
 public:
     void startSignsDetection();
     void startTraining();
     void startClassifier(const Mat&);
-    roiFinder::roi startFindRoi(Mat& frame);
+    vector<Mat> startFindRoi(Mat& frame, roiFinder::hsvParams p1, roiFinder::hsvParams p2);
 };
 
 #endif // ROADSIGNSDETECTION_H

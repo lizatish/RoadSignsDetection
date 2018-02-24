@@ -1,57 +1,36 @@
 #include "roifinder.h"
-
-roiFinder::roi roiFinder::startSearch(const Mat& frame){
+roiFinder::roiFinder(){}
+vector<Mat> roiFinder::startSearch(const Mat& frame, roiFinder::hsvParams params1, roiFinder::hsvParams params2){
 
     Mat hsvFrame;
     GaussianBlur(frame, frame, Size(5, 5), 2, 2); //размытие по Гауссу
     cvtColor(frame, hsvFrame, CV_BGR2HSV);
 
-    // Поиск красного
-    Mat mask1Red, mask2Red;
-    roiFinder::hsvParams hsvRed1 = { 0, 16, 110, 255, 130, 255};
-    roiFinder::hsvParams hsvRed2 = { 170, 180, 110, 255, 130, 255};
-    hsvInRange(hsvFrame, mask1Red, hsvRed1);
-    hsvInRange(hsvFrame, mask2Red, hsvRed2);
-    Mat maskRed = mask1Red | mask2Red;
-    imshow("Red", maskRed);
+    // Поиск цвета
+    Mat mask1;
+    hsvInRange(hsvFrame, mask1, params1);
 
-    // Поиск синего
-    Mat maskBlue;
-    roiFinder::hsvParams hsvBlue = { 100, 120, 140, 255, 40, 255};
-    hsvInRange(hsvFrame, maskBlue, hsvBlue);
-    imshow("Blue", maskBlue);
+    // Соединение масок, если это необходимо
+    Mat mask;
+    if(params2.hUp != 0){
+        Mat mask2;
+        hsvInRange(hsvFrame, mask2, params2);
+        mask = mask1 | mask2;
+    }
+    else
+        mask = mask1;
 
     // Обработка hsv изображения
-    Mat binaryRed, binaryBlue;
-    processingBinaryImage(maskRed, binaryRed);
-    processingBinaryImage(maskBlue, binaryBlue);
-    //        imshow("1", binaryRed);
-    //        imshow("2", binaryBlue);
+    Mat binaryFrame;
+    processingBinaryImage(mask, binaryFrame);
 
     // Нахождение областей ROI
-    Mat ROIRedFrame,  ROIBlueFrame;
-    vector<Rect> boundRectRed =  findROI(frame, binaryRed, ROIRedFrame);
-    vector<Rect> boundRectBlue =  findROI(frame, binaryBlue, ROIBlueFrame);
+    vector<Rect> boundRect = findROI(frame, binaryFrame);
 
     // Поиск кругов на ROI
-    vector<Mat> roiRed =  isItCircle(binaryRed, boundRectRed);
-    vector<Mat> roiBlue =  isItCircle(binaryBlue, boundRectBlue);
+    vector<Mat> roiCircles =  isItCircle(binaryFrame, boundRect);
 
-    //    vector<Mat> roiBlue;
-    //    vector<Mat> roiRed;
-    //    for(uint i = 0; i < boundRectRed.size(); i++){
-    //        Mat testMat = binaryRed(boundRectRed[i]).clone();
-    //        roiRed.push_back(testMat);
-    //    }
-    //    for(uint i = 0; i < boundRectBlue.size(); i++){
-    //        Mat testMat = binaryBlue(boundRectBlue[i]).clone();
-    //        roiBlue.push_back(testMat);
-    //    }
-
-    roiFinder::roi r;
-    r.roiR = roiRed;
-    r.roiB = roiBlue;
-    return r;
+    return roiCircles;
 }
 
 // Обработка бинаризованного изображения(удаление шумов)
@@ -85,7 +64,7 @@ void roiFinder::processingBinaryImage(const Mat& src, Mat& dst){
     dilate( erosion_dst, dst, element );
 }
 
-vector<Rect> roiFinder::findROI(const Mat& frame, const Mat& binary_frame, Mat& outputFrame){
+vector<Rect> roiFinder::findROI(const Mat& frame, const Mat& binary_frame){
 
     vector<vector<Point> > contours;    // Вектор точек контура
     vector<Vec4i> hierarchy;            // Вектор иерархий контуров
@@ -151,13 +130,6 @@ vector<Rect> roiFinder::findROI(const Mat& frame, const Mat& binary_frame, Mat& 
                 }
             }
         }
-    }
-    outputFrame = frame.clone();
-    // Рисование прямоугольников - зон интересов
-    for(unsigned int k = 0; k < boundRect.size(); k++ )
-    {
-        Scalar color = Scalar(0, 120, 255);
-        rectangle( outputFrame, boundRect[k].tl(), boundRect[k].br(), color, 2, 8, 0 );
     }
 
     return boundRect;
